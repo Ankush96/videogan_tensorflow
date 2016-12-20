@@ -8,7 +8,8 @@ def main(level, files_pattern):
   
   vals = utils.prepared_reader(level, files_pattern)
   model = nnet.videoGan()
-  model.explore_data(vals)
+  data = utils.Dataset()
+  model.train(vals, data)
     
 
 if __name__ == '__main__':

@@ -2,25 +2,35 @@ import tensorflow as tf
 import sys
 from options import Options
 from nnet import modules as md
+import utils
+import os
 
 
 class videoGan():
 
-	def __init__(self, video_shape=[32,64,64,3], batch_size=100, sample_size = 64,
-				 output_size=64, z_dim=100, gf_dim=64, df_dim=64,
-				 gfc_dim=1024, dfc_dim=1024, c_dim=3, mask_penalty=0.1):
+	def __init__(self, 
+				 video_shape=Options.video_shape, 
+				 batch_size=Options.batch_size, 
+				 sample_size = Options.sample_size,
+				 z_dim=Options.z_dim,
+				 gf_dim=Options.gf_dim,
+				 df_dim=Options.df_dim,
+				 gfc_dim=Options.gfc_dim,
+				 dfc_dim=Options.dfc_dim,
+				 c_dim=Options.c_dim,
+				 mask_penalty=Options.mask_penalty):
 
 		"""
 		Args:
 			batch_size: The size of batch. Should be specified before training.
-			output_size: (optional) The resolution in pixels of the images. [64]
-			y_dim: (optional) Dimension of dim for y. [None]
+			video_shape: (optional) Shape of videos. [32,64,64,3]
 			z_dim: (optional) Dimension of dim for Z. [100]
 			gf_dim: (optional) Dimension of gen filters in first conv layer. [64]
 			df_dim: (optional) Dimension of discrim filters in first conv layer. [64]
 			gfc_dim: (optional) Dimension of gen units for for fully connected layer. [1024]
 			dfc_dim: (optional) Dimension of discrim units for fully connected layer. [1024]
 			c_dim: (optional) Dimension of image color. For grayscale input, set to 1. [3]
+			mask_penalty: (optional) Lambda for L1 regularizer of mask
 		"""
 
 		self.batch_size = batch_size
@@ -56,20 +66,6 @@ class videoGan():
 		self.g_vbn2 = md.batch_norm(name='g_vbn2')
 		self.g_vbn3 = md.batch_norm(name='g_vbn3')
 
-
-		self.video_batch = tf.placeholder(
-			dtype = tf.float32,
-			shape = [None,300,1024],
-			name = 'video')
-		self.labels = tf.placeholder(
-			dtype = tf.int32,
-			shape = [None, Options.num_classes],
-			name = 'labels')
-		self.seq_lengths = tf.placeholder(
-			dtype = tf.int32,
-			shape = [None],
-			name = 'sequence_lengths')
-		#self.keep_prob = md.keep_prob
 
 		self.videos = tf.placeholder(
 			dtype = tf.float32, 
@@ -275,55 +271,73 @@ class videoGan():
 		gen_video = tf.add(foreground, background)
 		return gen_video
 	 
-		
+
 	def train(self, dataset):
+
+		'''Args
+			dataset: An object of the class dataset which has the next_batch() function
+		'''
 		
 		d_optim = tf.train.AdamOptimizer(Options.lrate, beta1=Options.beta1) \
 						  .minimize(self.d_loss, var_list=self.d_vars)
 		g_optim = tf.train.AdamOptimizer(Options.learning_rate, beta1=Options.beta1) \
 						  .minimize(self.g_loss, var_list=self.g_vars)
-		tf.initialize_all_variables().run()
-
-	def tfrecords2np(self, vals):
-		video_id, video, labels, num_frames = vals
-		video_batch, labels_batch, num_frames_batch = tf.train.shuffle_batch([video, labels, num_frames],
-															batch_size=Options.batch_size,
-															capacity=200,
-															min_after_dequeue=100,
-															shapes=[[300,1024],[4816],[]])
-
 		with tf.Session() as sess:
-			sess.run(tf.initialize_local_variables())
-			sess.run(tf.initialize_all_variables())
-			
-			tf.train.start_queue_runners(sess=sess)
+			tf.initialize_all_variables().run()
 
-			for i in range(Options.train_epochs):
-				features, labels, max_lengths = sess.run((video_batch, labels_batch, num_frames_batch))
-				
-	def explore_data(self, vals):
-		video_id, video, labels, num_frames = vals
-		video_batch, labels_batch, num_frames_batch = tf.train.shuffle_batch([video, labels, num_frames],
-															batch_size=Options.batch_size,
-															capacity=200,
-															min_after_dequeue=100,
-															shapes=[[300,1024],[4816],[]])
+			self.g_sum = merge_summary([self.z_sum, self.d__sum,
+            self.G_sum, self.d_loss_fake_sum, self.g_loss_sum])
+        	self.d_sum = merge_summary([self.z_sum, self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
+        	self.writer = SummaryWriter("./logs", self.sess.graph)
 
-		with tf.Session() as sess:
-			sess.run(tf.initialize_local_variables())
-			sess.run(tf.initialize_all_variables())
-			coord = tf.train.Coordinator()
-			threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+        	sample_z = np.random.uniform(-1, 1, size=(self.sample_size , self.z_dim))
 
-			try:
-			  while not coord.should_stop():
-				#vid, features, labels, _ = sess.run(vals)
-				#print(count,vid, features.shape, labels.shape)
-			 
-				features, labels, max_lengths = sess.run((video_batch,labels_batch, num_frames_batch))
-				print(features.shape, labels.shape, max_lengths)
-			except tf.errors.OutOfRangeError:
-			  print('Finished extracting.')
-			finally:
-			  coord.request_stop()
-			  coord.join(threads)
+        	counter = 1
+
+        	for epoch in Options.train_epochs:
+        		for sub_data in dataset.train_iter():
+
+        			batch_z = np.random.uniform(-1, 1, [Options.batch_size, self.z_dim]).astype(np.float32)
+
+        			# Update D network
+                    _, summary_str = self.sess.run([d_optim, self.d_sum],
+                        feed_dict={ self.videos: sub_data, self.z: batch_z })
+                    self.writer.add_summary(summary_str, counter)
+
+                    # Update G n
+                    etwork
+                    _, summary_str = self.sess.run([g_optim, self.g_sum],
+                        feed_dict={ self.z: batch_z })
+                    self.writer.add_summary(summary_str, counter)
+
+                    
+                    errD_fake = self.d_loss_fake.eval({self.z: batch_z})
+                    errD_real = self.d_loss_real.eval({self.videos: sub_data})
+                    errG = self.g_loss.eval({self.z: batch_z})
+
+                    counter += 1
+
+                    print("Epoch: [%d], d_loss_fake: %.8f, d_loss_real: %.8f, g_loss: %.8f" \
+                    % (epoch, errD_fake, errD_real, errG))
+
+                    if np.mod(counter, 100) == 1:
+                    	samples, d_loss, g_loss = self.sess.run(
+                            [self.sampler, self.d_loss, self.g_loss],
+                            feed_dict={self.z: sample_z, self.videos: sub_data}
+                        )
+                        utils.save_samples(samples)
+                        print("[Sample] d_loss: %.8f, g_loss: %.8f" % (d_loss, g_loss))
+
+                    if np.mod(counter, 500) == 2:
+                    	if not os.path.exists("./checkpoints/"):
+    						os.makedirs("./checkpoints/")
+                    	self.save(Options.checkpoint_dir, counter)
+
+
+    def save(self, _dir, counter, sess):
+    	if not os.path.exists(_dir):
+    		os.makedirs(_dir)
+    	self.saver.save(sess, _dir, global_step=counter)
+
+
+
