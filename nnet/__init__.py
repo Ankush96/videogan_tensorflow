@@ -304,7 +304,8 @@ class videoGan():
 			terrD_real = 0.0
 			terrG = 0.0
 
-			begin = time.time()
+			s_begin = time.time()
+			c_begin = time.time()
 
 			print("Starting training epoch")
 			for epoch in range(Options.train_epochs):
@@ -335,19 +336,21 @@ class videoGan():
 					print("Epoch: [%d], d_loss_fake: [%.6f]--[%.4f], d_loss_real: [%.6f]--[%.4f], g_loss: [%.6f]--[%.4f]" \
 					% (epoch, terrD_fake/counter, errD_fake, terrD_real/counter, errD_real, terrG/counter, errG))
 
-					if time.time() - begin > Options.sampler_time:
+					if time.time() - s_begin > Options.sampler_time:
 						samples, d_loss, g_loss = self.sess.run(
 							[self.sampler, self.d_loss, self.g_loss],
 							feed_dict={self.z: sample_z, self.videos: sub_data}
 						)
 						utils.save_samples(samples, epoch, counter)
 						print("[Sample] d_loss: %.8f, g_loss: %.8f" % (d_loss, g_loss))
+						s_begin = time.time()
 
-					if time.time() - begin > Options.checkpoint_time:
+					if time.time() - c_begin > Options.checkpoint_time:
 						print("Checkpointing")
 						if not os.path.exists("./checkpoints/"):
 							os.makedirs("./checkpoints/")
 						self.save(Options.checkpoint_dir(), counter, sess)
+						c_begin = time.time()
 						
 						counter = 0
 						terrD_fake = 0.0
