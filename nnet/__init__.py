@@ -5,6 +5,7 @@ from options import Options
 from nnet import modules as md
 import utils
 import os
+import time
 
 
 class videoGan():
@@ -232,7 +233,7 @@ class videoGan():
 		background = tf.nn.tanh(sh4)
 
 		# Extending static part over time by replicating. Reshape is needed to increase dimension
-		background = tf.tile(tf.reshape(background,[self.batch_size, 1, s, s, self.c_dim]), [1, s2, 1, 1, 1])
+		background = tf.tile(tf.reshape(background,[self.sample_size, 1, s, s, self.c_dim]), [1, s2, 1, 1, 1])
 
 		# v stands for video part
 		self.vz_ = md.linear(z, self.gf_dim*8*s32*s16*s16, 'g_vh0_lin')
@@ -241,24 +242,24 @@ class videoGan():
 		vh0 = tf.nn.relu(self.g_vbn0(self.vh0))
 
 		self.vh1 = md.deconv3d(vh0, 
-			[self.batch_size, s16, s8, s8, self.gf_dim*4], name='g_vh1')
+			[self.sample_size, s16, s8, s8, self.gf_dim*4], name='g_vh1')
 		vh1 = tf.nn.relu(self.g_vbn1(self.vh1))
 
 		vh2 = md.deconv3d(vh1,
-			[self.batch_size, s8, s4, s4, self.gf_dim*2], name='g_vh2')
+			[self.sample_size, s8, s4, s4, self.gf_dim*2], name='g_vh2')
 		vh2 = tf.nn.relu(self.g_vbn2(vh2))
 
 		vh3 = md.deconv3d(vh2,
-			[self.batch_size, s4, s2, s2, self.gf_dim*1], name='g_vh3')
+			[self.sample_size, s4, s2, s2, self.gf_dim*1], name='g_vh3')
 		vh3 = tf.nn.relu(self.g_vbn3(vh3))
 
 		mask_out = md.deconv3d(vh3,
-			[self.batch_size, s2, s, s, 1], name='g_mask')
+			[self.sample_size, s2, s, s, 1], name='g_mask')
 
 		mask_out = tf.nn.sigmoid(mask_out)
 
 		vh4 = md.deconv3d(vh3,
-			[self.batch_size, s2, s, s, self.c_dim], name='g_vh4')
+			[self.sample_size, s2, s, s, self.c_dim], name='g_vh4')
 
 		foreground = tf.nn.tanh(vh4)
 
@@ -274,9 +275,9 @@ class videoGan():
 	def train(self, dataset):
 		
 		print("Creating optimizer")
-		d_optim = tf.train.AdamOptimizer(Options.lrate, beta1=Options.beta1) \
+		d_optim = tf.train.AdamOptimizer(Options.lrate_d, beta1=Options.beta1) \
 						  .minimize(self.d_loss, var_list=self.d_vars)
-		g_optim = tf.train.AdamOptimizer(Options.lrate, beta1=Options.beta1) \
+		g_optim = tf.train.AdamOptimizer(Options.lrate_g, beta1=Options.beta1) \
 						  .minimize(self.g_loss, var_list=self.g_vars)
 		print("Optimizer created")
 
@@ -298,7 +299,12 @@ class videoGan():
 
 			sample_z = np.random.uniform(-1, 1, size=(self.sample_size , self.z_dim))
 
-			counter = 1
+			counter = 0
+			terrD_fake = 0.0
+			terrD_real = 0.0
+			terrG = 0.0
+
+			begin = time.time()
 
 			print("Starting training epoch")
 			for epoch in range(Options.train_epochs):
@@ -306,8 +312,6 @@ class videoGan():
 
 					batch_z = np.random.uniform(-1, 1, [Options.batch_size, self.z_dim]).astype(np.float32)
 
-					if counter == 1: # Just to check once
-						print("Updating D and G")
 					# Update D network
 					_, summary_str = self.sess.run([d_optim, self.d_sum],
 						feed_dict={ self.videos: sub_data, self.z: batch_z })
@@ -317,32 +321,38 @@ class videoGan():
 					_, summary_str = self.sess.run([g_optim, self.g_sum],
 						feed_dict={ self.z: batch_z })
 					self.writer.add_summary(summary_str, counter)
-
-					if counter == 1:
-						print("D and G updated")
-
 					
 					errD_fake = self.d_loss_fake.eval({self.z: batch_z})
 					errD_real = self.d_loss_real.eval({self.videos: sub_data})
 					errG = self.g_loss.eval({self.z: batch_z})
 
+					terrD_real += errD_real
+					terrD_fake += errD_fake
+					terrG += errG
+
 					counter += 1
 
-					print("Epoch: [%d], d_loss_fake: %.8f, d_loss_real: %.8f, g_loss: %.8f" \
-					% (epoch, errD_fake, errD_real, errG))
+					print("Epoch: [%d], d_loss_fake: [%.6f]--[%.4f], d_loss_real: [%.6f]--[%.4f], g_loss: [%.6f]--[%.4f]" \
+					% (epoch, terrD_fake/counter, errD_fake, terrD_real/counter, errD_real, terrG/counter, errG))
 
-					if np.mod(counter, 100) == 1:
+					if time.time() - begin > Options.sampler_time:
 						samples, d_loss, g_loss = self.sess.run(
 							[self.sampler, self.d_loss, self.g_loss],
 							feed_dict={self.z: sample_z, self.videos: sub_data}
 						)
-						utils.save_samples(samples)
+						utils.save_samples(samples, epoch, counter)
 						print("[Sample] d_loss: %.8f, g_loss: %.8f" % (d_loss, g_loss))
 
-					if np.mod(counter, 500) == 2:
+					if time.time() - begin > Options.checkpoint_time:
+						print("Checkpointing")
 						if not os.path.exists("./checkpoints/"):
 							os.makedirs("./checkpoints/")
 						self.save(Options.checkpoint_dir(), counter, sess)
+						
+						counter = 0
+						terrD_fake = 0.0
+						terrD_real = 0.0
+						terrG = 0.0
 
 
 	def save(self, _dir, counter, sess):
