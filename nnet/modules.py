@@ -4,6 +4,19 @@ from options import Options
 global keep_prob
 keep_prob = tf.placeholder(tf.float32)
 
+try:
+    image_summary = tf.image_summary
+    scalar_summary = tf.scalar_summary
+    histogram_summary = tf.histogram_summary
+    merge_summary = tf.merge_summary
+    SummaryWriter = tf.train.SummaryWriter
+except:
+    image_summary = tf.summary.image
+    scalar_summary = tf.summary.scalar
+    histogram_summary = tf.summary.histogram
+    merge_summary = tf.summary.merge
+    SummaryWriter = tf.summary.FileWriter
+
 
 class batch_norm(object):
 	def __init__(self, epsilon=1e-5, momentum = 0.9, name="batch_norm"):
@@ -22,7 +35,7 @@ class batch_norm(object):
 
 
 def conv2d(input_, output_dim, 
-		   k_h=5, k_w=5, d_h=2, d_w=2, stddev=0.02,
+		   k_h=4, k_w=4, d_h=2, d_w=2, stddev=0.02,
 		   name="conv2d"):
 	with tf.variable_scope(name):
 		w = tf.get_variable('w', [k_h, k_w, input_.get_shape()[-1], output_dim],
@@ -36,7 +49,7 @@ def conv2d(input_, output_dim,
 
 
 def conv3d(input_, output_dim, 
-		   k_d=5, k_h=5, k_w=5, d_d=2, d_h=2, d_w=2, stddev=0.02,
+		   k_d=4, k_h=4, k_w=4, d_d=2, d_h=2, d_w=2, stddev=0.02,
 		   name="conv2d"):
 	with tf.variable_scope(name):
 		w = tf.get_variable('w', [k_d, k_h, k_w, input_.get_shape()[-1], output_dim],
@@ -51,7 +64,7 @@ def conv3d(input_, output_dim,
 
 
 def deconv2d(input_, output_shape,
-			 k_h=5, k_w=5, d_h=2, d_w=2, stddev=0.02,
+			 k_h=4, k_w=4, d_h=2, d_w=2, stddev=0.02,
 			 name="deconv2d", with_w=False):
 	with tf.variable_scope(name):
 		# filter : [height, width, output_channels, in_channels]
@@ -77,7 +90,7 @@ def deconv2d(input_, output_shape,
 	   
 
 def deconv3d(input_, output_shape,
-			 k_d=5, k_h=5, k_w=5, d_d=2, d_h=2, d_w=2, stddev=0.02,
+			 k_d=4, k_h=4, k_w=4, d_d=2, d_h=2, d_w=2, stddev=0.02,
 			 name="deconv3d", with_w=False):
 	with tf.variable_scope(name):
 		# filter : [depth, height, width, output_channels, in_channels]
