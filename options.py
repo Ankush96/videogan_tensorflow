@@ -4,10 +4,11 @@ import tensorflow as tf
 class Options(object):
 
 	# training
-	batch_size = 64
-	sample_size = 64
-	train_epochs = 100000
-	lrate = 1e-4
+	batch_size = 20
+	sample_size = 20
+	train_epochs = 10**20
+	lrate_d = 1e-4
+	lrate_g = 1e-3
 	beta1 = 0.5
 
 
@@ -25,6 +26,7 @@ class Options(object):
 	video_shape = [32,64,64,3]
 	dataset = './data'
 	mean_path = './data/mean.npz'
+	sample_path = './samples'
 
 
 	def prefix():
@@ -32,12 +34,15 @@ class Options(object):
 		prefix += "bs_%d_" % (Options.batch_size)
 		prefix += "ss_%d_" % (Options.sample_size)
 		prefix += "te_%d_" % (Options.train_epochs)
-		prefix += "lr_%d_" % (Options.lrate)
+		prefix += "lrd_%d_" % (Options.lrate_d)
+		prefix += "lrg_%d_" % (Options.lrate_g)
 		return prefix
 
 		
 	# Model saving
 	def checkpoint_dir():
 		return "./checkpoints/" + Options.prefix()
+	checkpoint_time = 60*60
+	sampler_time = 10*60
 	
     

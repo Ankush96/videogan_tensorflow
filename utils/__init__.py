@@ -43,7 +43,6 @@ class Dataset(object):
 	def _get_iter(self, data):
 		n = len(data)
 		num_batches = n // Options.batch_size
-
 		for i in range(num_batches-1):
 
 			ind1 = i*Options.batch_size
@@ -70,14 +69,15 @@ class Dataset(object):
 			yield batch
 
 
-def save_samples(samples):
+def save_samples(samples, epoch, counter):
 	if not os.path.exists(Options.sample_path):
 		os.makedirs(Options.sample_path)
 	folder = 'Epoch_%s_Counter_%s'%(str(epoch),str(counter))
 	folder = os.path.join(Options.sample_path,folder)
-	os.makedirs(folder)
-	# samples shape is [batch_size]+video_shape = [bs, 32, 64, 64, 3]
-	for sample_num in samples.shape[0]:
+	if not os.path.exists(folder):
+		os.makedirs(folder)
+	# samples shape is [sample_size]+video_shape = [ss, 32, 64, 64, 3]
+	for sample_num in range(samples.shape[0]):
 		sample = samples[sample_num]
 		sample = np.reshape(sample, [-1,64,3])
 		name = str(sample_num)+'.jpg'
