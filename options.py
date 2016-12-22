@@ -6,7 +6,7 @@ class Options(object):
 	# training
 	batch_size = 64
 	sample_size = 64
-	train_epochs = 100
+	train_epochs = 100000
 	lrate = 1e-4
 	beta1 = 0.5
 
@@ -33,6 +33,7 @@ class Options(object):
 		prefix += "ss_%d_" % (Options.sample_size)
 		prefix += "te_%d_" % (Options.train_epochs)
 		prefix += "lr_%d_" % (Options.lrate)
+		return prefix
 
 		
 	# Model saving

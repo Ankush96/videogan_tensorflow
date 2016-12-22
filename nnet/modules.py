@@ -5,17 +5,17 @@ global keep_prob
 keep_prob = tf.placeholder(tf.float32)
 
 try:
-    image_summary = tf.image_summary
-    scalar_summary = tf.scalar_summary
-    histogram_summary = tf.histogram_summary
-    merge_summary = tf.merge_summary
-    SummaryWriter = tf.train.SummaryWriter
+	image_summary = tf.summary.image
+	scalar_summary = tf.summary.scalar
+	histogram_summary = tf.summary.histogram
+	merge_summary = tf.summary.merge
+	SummaryWriter = tf.summary.FileWriter
 except:
-    image_summary = tf.summary.image
-    scalar_summary = tf.summary.scalar
-    histogram_summary = tf.summary.histogram
-    merge_summary = tf.summary.merge
-    SummaryWriter = tf.summary.FileWriter
+	image_summary = tf.image_summary
+	scalar_summary = tf.scalar_summary
+	histogram_summary = tf.histogram_summary
+	merge_summary = tf.merge_summary
+	SummaryWriter = tf.train.SummaryWriter
 
 
 class batch_norm(object):

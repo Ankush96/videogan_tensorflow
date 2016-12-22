@@ -89,3 +89,4 @@ ENV/
 .ropeproject
 data/*
 logs/
+checkpoints/

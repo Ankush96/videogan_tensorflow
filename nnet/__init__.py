@@ -91,7 +91,6 @@ class videoGan():
 		
 		self.d_sum = md.histogram_summary("d", self.D)
 		self.d__sum = md.histogram_summary("d_", self.D_)
-		self.G_sum = md.image_summary("G", self.G)
 
 		self.d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits, tf.ones_like(self.D)))
 		self.d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits_, tf.zeros_like(self.D_)))
@@ -292,7 +291,7 @@ class videoGan():
 
 			print("Merging summaries")
 			self.g_sum = md.merge_summary([self.z_sum, self.d__sum,
-			self.G_sum, self.d_loss_fake_sum, self.g_loss_sum])
+										 self.d_loss_fake_sum, self.g_loss_sum])
 			self.d_sum = md.merge_summary([self.z_sum, self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
 			self.writer = md.SummaryWriter("./logs", self.sess.graph)
 			print("Summaries merged")
@@ -307,7 +306,7 @@ class videoGan():
 
 					batch_z = np.random.uniform(-1, 1, [Options.batch_size, self.z_dim]).astype(np.float32)
 
-					if counter == 1:
+					if counter == 1: # Just to check once
 						print("Updating D and G")
 					# Update D network
 					_, summary_str = self.sess.run([d_optim, self.d_sum],
@@ -343,7 +342,7 @@ class videoGan():
 					if np.mod(counter, 500) == 2:
 						if not os.path.exists("./checkpoints/"):
 							os.makedirs("./checkpoints/")
-						self.save(Options.checkpoint_dir(), counter)
+						self.save(Options.checkpoint_dir(), counter, sess)
 
 
 	def save(self, _dir, counter, sess):
