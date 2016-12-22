@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 import sys
 from options import Options
 from nnet import modules as md
@@ -36,7 +37,6 @@ class videoGan():
 		self.batch_size = batch_size
 		self.video_shape = video_shape
 		self.sample_size = sample_size
-		self.output_size = output_size
 
 		self.z_dim = z_dim
 
@@ -80,7 +80,7 @@ class videoGan():
 			shape = [None, self.z_dim],
 			name = 'z')
 
-		self.z_sum = tf.histogram_summary("z", self.z)
+		self.z_sum = md.histogram_summary("z", self.z)
 
 
 		self.G, self.g_loss_penalty = self.generator(self.z)
@@ -89,26 +89,26 @@ class videoGan():
 		self.sampler = self.sampler(self.z)
 		self.D_, self.D_logits_ = self.discriminator(self.G, reuse=True)
 		
-		self.d_sum = tf.histogram_summary("d", self.D)
-		self.d__sum = tf.histogram_summary("d_", self.D_)
-		self.G_sum = tf.image_summary("G", self.G)
+		self.d_sum = md.histogram_summary("d", self.D)
+		self.d__sum = md.histogram_summary("d_", self.D_)
+		self.G_sum = md.image_summary("G", self.G)
 
 		self.d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits, tf.ones_like(self.D)))
 		self.d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits_, tf.zeros_like(self.D_)))
 		self.g_loss_no_penalty = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(self.D_logits_, tf.ones_like(self.D_)))
 
-		self.d_loss_real_sum = tf.scalar_summary("d_loss_real", self.d_loss_real)
-		self.d_loss_fake_sum = tf.scalar_summary("d_loss_fake", self.d_loss_fake)
+		self.d_loss_real_sum = md.scalar_summary("d_loss_real", self.d_loss_real)
+		self.d_loss_fake_sum = md.scalar_summary("d_loss_fake", self.d_loss_fake)
 													
 		self.d_loss = self.d_loss_real + self.d_loss_fake
 
-		self.g_loss_no_penalty_sum = tf.scalar_summary("g_loss_no_penalty", self.g_loss_no_penalty)
-		self.g_loss_penalty_sum = tf.scalar_summary("g_loss_penalty", self.g_loss_penalty)
+		self.g_loss_no_penalty_sum = md.scalar_summary("g_loss_no_penalty", self.g_loss_no_penalty)
+		self.g_loss_penalty_sum = md.scalar_summary("g_loss_penalty", self.g_loss_penalty)
 
 		self.g_loss = self.mask_penalty*self.g_loss_penalty + self.g_loss_no_penalty
 
-		self.g_loss_sum = tf.scalar_summary("g_loss", self.g_loss)
-		self.d_loss_sum = tf.scalar_summary("d_loss", self.d_loss)
+		self.g_loss_sum = md.scalar_summary("g_loss", self.g_loss)
+		self.d_loss_sum = md.scalar_summary("d_loss", self.d_loss)
 
 		t_vars = tf.trainable_variables()
 
@@ -137,7 +137,7 @@ class videoGan():
 
 
 	def generator(self, z, y=None):
-		s = self.output_size
+		s = 64
 		s2, s4, s8, s16, s32 = int(s/2), int(s/4), int(s/8), int(s/16), int(s/32)
 
 		# s stands for static part
@@ -206,7 +206,7 @@ class videoGan():
 	def sampler(self, z, y=None):
 		tf.get_variable_scope().reuse_variables()
 
-		s = self.output_size
+		s = 64
 		s2, s4, s8, s16, s32 = int(s/2), int(s/4), int(s/8), int(s/16), int(s/32)
 
 		# s stands for static part
@@ -273,71 +273,80 @@ class videoGan():
 	 
 
 	def train(self, dataset):
-
-		'''Args
-			dataset: An object of the class dataset which has the next_batch() function
-		'''
 		
+		print("Creating optimizer")
 		d_optim = tf.train.AdamOptimizer(Options.lrate, beta1=Options.beta1) \
 						  .minimize(self.d_loss, var_list=self.d_vars)
-		g_optim = tf.train.AdamOptimizer(Options.learning_rate, beta1=Options.beta1) \
+		g_optim = tf.train.AdamOptimizer(Options.lrate, beta1=Options.beta1) \
 						  .minimize(self.g_loss, var_list=self.g_vars)
+		print("Optimizer created")
+
 		with tf.Session() as sess:
-			tf.initialize_all_variables().run()
+			self.sess = sess
+			print("Initializing")
+			try:
+				tf.global_variables_initializer().run()
+			except:
+				tf.initialize_all_variables().run()
+			print("Initialized")
 
-			self.g_sum = merge_summary([self.z_sum, self.d__sum,
-            self.G_sum, self.d_loss_fake_sum, self.g_loss_sum])
-        	self.d_sum = merge_summary([self.z_sum, self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
-        	self.writer = SummaryWriter("./logs", self.sess.graph)
+			print("Merging summaries")
+			self.g_sum = md.merge_summary([self.z_sum, self.d__sum,
+			self.G_sum, self.d_loss_fake_sum, self.g_loss_sum])
+			self.d_sum = md.merge_summary([self.z_sum, self.d_sum, self.d_loss_real_sum, self.d_loss_sum])
+			self.writer = md.SummaryWriter("./logs", self.sess.graph)
+			print("Summaries merged")
 
-        	sample_z = np.random.uniform(-1, 1, size=(self.sample_size , self.z_dim))
+			sample_z = np.random.uniform(-1, 1, size=(self.sample_size , self.z_dim))
 
-        	counter = 1
+			counter = 1
 
-        	for epoch in Options.train_epochs:
-        		for sub_data in dataset.train_iter():
+			print("Starting training epoch")
+			for epoch in range(Options.train_epochs):
+				for sub_data in dataset.train_iter():
 
-        			batch_z = np.random.uniform(-1, 1, [Options.batch_size, self.z_dim]).astype(np.float32)
+					batch_z = np.random.uniform(-1, 1, [Options.batch_size, self.z_dim]).astype(np.float32)
 
-        			# Update D network
-                    _, summary_str = self.sess.run([d_optim, self.d_sum],
-                        feed_dict={ self.videos: sub_data, self.z: batch_z })
-                    self.writer.add_summary(summary_str, counter)
+					if counter == 1:
+						print("Updating D and G")
+					# Update D network
+					_, summary_str = self.sess.run([d_optim, self.d_sum],
+						feed_dict={ self.videos: sub_data, self.z: batch_z })
+					self.writer.add_summary(summary_str, counter)
 
-                    # Update G n
-                    etwork
-                    _, summary_str = self.sess.run([g_optim, self.g_sum],
-                        feed_dict={ self.z: batch_z })
-                    self.writer.add_summary(summary_str, counter)
+					# Update G network
+					_, summary_str = self.sess.run([g_optim, self.g_sum],
+						feed_dict={ self.z: batch_z })
+					self.writer.add_summary(summary_str, counter)
 
-                    
-                    errD_fake = self.d_loss_fake.eval({self.z: batch_z})
-                    errD_real = self.d_loss_real.eval({self.videos: sub_data})
-                    errG = self.g_loss.eval({self.z: batch_z})
+					if counter == 1:
+						print("D and G updated")
 
-                    counter += 1
+					
+					errD_fake = self.d_loss_fake.eval({self.z: batch_z})
+					errD_real = self.d_loss_real.eval({self.videos: sub_data})
+					errG = self.g_loss.eval({self.z: batch_z})
 
-                    print("Epoch: [%d], d_loss_fake: %.8f, d_loss_real: %.8f, g_loss: %.8f" \
-                    % (epoch, errD_fake, errD_real, errG))
+					counter += 1
 
-                    if np.mod(counter, 100) == 1:
-                    	samples, d_loss, g_loss = self.sess.run(
-                            [self.sampler, self.d_loss, self.g_loss],
-                            feed_dict={self.z: sample_z, self.videos: sub_data}
-                        )
-                        utils.save_samples(samples)
-                        print("[Sample] d_loss: %.8f, g_loss: %.8f" % (d_loss, g_loss))
+					print("Epoch: [%d], d_loss_fake: %.8f, d_loss_real: %.8f, g_loss: %.8f" \
+					% (epoch, errD_fake, errD_real, errG))
 
-                    if np.mod(counter, 500) == 2:
-                    	if not os.path.exists("./checkpoints/"):
-    						os.makedirs("./checkpoints/")
-                    	self.save(Options.checkpoint_dir, counter)
+					if np.mod(counter, 100) == 1:
+						samples, d_loss, g_loss = self.sess.run(
+							[self.sampler, self.d_loss, self.g_loss],
+							feed_dict={self.z: sample_z, self.videos: sub_data}
+						)
+						utils.save_samples(samples)
+						print("[Sample] d_loss: %.8f, g_loss: %.8f" % (d_loss, g_loss))
 
-
-    def save(self, _dir, counter, sess):
-    	if not os.path.exists(_dir):
-    		os.makedirs(_dir)
-    	self.saver.save(sess, _dir, global_step=counter)
-
+					if np.mod(counter, 500) == 2:
+						if not os.path.exists("./checkpoints/"):
+							os.makedirs("./checkpoints/")
+						self.save(Options.checkpoint_dir(), counter)
 
 
+	def save(self, _dir, counter, sess):
+		if not os.path.exists(_dir):
+			os.makedirs(_dir)
+		self.saver.save(sess, _dir, global_step=counter)
