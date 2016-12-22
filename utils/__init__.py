@@ -71,4 +71,15 @@ class Dataset(object):
 
 
 def save_samples(samples):
-	pass
+	if not os.path.exists(Options.sample_path):
+		os.makedirs(Options.sample_path)
+	folder = 'Epoch_%s_Counter_%s'%(str(epoch),str(counter))
+	folder = os.path.join(Options.sample_path,folder)
+	os.makedirs(folder)
+	# samples shape is [batch_size]+video_shape = [bs, 32, 64, 64, 3]
+	for sample_num in samples.shape[0]:
+		sample = samples[sample_num]
+		sample = np.reshape(sample, [-1,64,3])
+		name = str(sample_num)+'.jpg'
+		name = os.path.join(folder,name)
+		io.imsave(name, sample)
