@@ -23,7 +23,8 @@ class Options(object):
 
 	# data
 	video_shape = [32,64,64,3]
-	train_dataset = './data/csail/videos-0'
+	dataset = './data'
+	mean_path = './data/mean.npz'
 
 
 	def prefix():
@@ -35,6 +36,7 @@ class Options(object):
 
 		
 	# Model saving
-	checkpoint_dir = "./checkpoints/" + Options.prefix()
+	def checkpoint_dir():
+		return "./checkpoints/" + Options.prefix()
 	
     
