@@ -25,7 +25,7 @@ class Options(object):
 	# data
 	video_shape = [32,64,64,3]
 	dataset = './data'
-	mean_path = './data/mean.npz'
+	mean_path = './data/mean.png'
 	sample_path = './samples'
 
 
