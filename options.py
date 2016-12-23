@@ -7,8 +7,8 @@ class Options(object):
 	batch_size = 20
 	sample_size = 20
 	train_epochs = 10**20
-	lrate_d = 1e-4
-	lrate_g = 1e-3
+	lrate_d = 1e-5
+	lrate_g = 1e-4
 	beta1 = 0.5
 
 
@@ -42,7 +42,7 @@ class Options(object):
 	# Model saving
 	def checkpoint_dir():
 		return "./checkpoints/" + Options.prefix()
-	checkpoint_time = 60*60
-	sampler_time = 10*60
+	checkpoint_time = 60*60 # 1 hour
+	sampler_time = 60*60 # 1 hour
 	
     

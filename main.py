@@ -7,12 +7,12 @@ import argparse
 def main():
 
 	parser = argparse.ArgumentParser("Parses hyperparameters")
-	parser.add_argument("--calc_m", type=bool, default=False)
+	parser.add_argument("--calc_m", type=bool, default=False)	# If true, it will calculate and save the mean video
 	p = parser.parse_args(sys.argv[1:])
 
 	data = utils.Dataset(p.calc_m)
 	model = nnet.videoGan()
-	model.train(data)
+	#model.train(data)
 
 if __name__ == '__main__':
  	main()
