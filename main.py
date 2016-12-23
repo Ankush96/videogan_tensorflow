@@ -7,8 +7,8 @@ import argparse
 def main():
 
 	parser = argparse.ArgumentParser("Parses hyperparameters")
-    parser.add_argument("--calc_m", type=bool, default=False)
-    p = parser.parse_args(sys.argv[1:])
+	parser.add_argument("--calc_m", type=bool, default=False)
+	p = parser.parse_args(sys.argv[1:])
 
 	data = utils.Dataset(p.calc_m)
 	model = nnet.videoGan()
