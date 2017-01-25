@@ -60,7 +60,7 @@ class Dataset(object):
 				print("Saving data list to %s"%Options.data_list)
 		print("Time taken to load data = %.2f seconds"%(time.time()-begin))
 
-		if self._calc_mean:
+		if self._calc_mean or not os.path.exists(Options.mean_path):
 
 			print("Checking integrity of files and calculationg mean. This will take several minutes and needs to be done only once.")
 
