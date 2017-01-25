@@ -17,13 +17,6 @@ Make a folder named data in this repository and put all images (the jpeg files a
 
 Training
 ----------------------------------------
-All the hyperparameters are saved in the options.py file. If you are running the code for the first time, use the calc_m flag. This will calculate and save the mean of all videos. Additionally, this will check if any file is corrupted and prompt you to delete the files.
-
-```sh
-python main.py --calc_m True
-```
-
-If you are not running the code for the 1st time and the dataset hasn't changed, then the mean has already been calculated and saved. Use the following then.
 ```sh
 python main.py
 ```
