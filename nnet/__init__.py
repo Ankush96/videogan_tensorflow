@@ -381,6 +381,7 @@ class videoGan():
 
 			s_begin = time.time()
 			c_begin = time.time()
+			p_begin = time.time()
 
 			print("Starting training epoch")
 			for epoch in range(Options.train_epochs):
@@ -407,9 +408,11 @@ class videoGan():
 					terrG += errG
 
 					counter += 1
-
-					print("Epoch: [%d], d_loss_fake: [%.6f]--[%.4f], d_loss_real: [%.6f]--[%.4f], g_loss: [%.6f]--[%.4f]" \
-					% (epoch, terrD_fake/counter, errD_fake, terrD_real/counter, errD_real, terrG/counter, errG))
+					
+					if time.time() - p_begin > Options.print_time:
+						print("Epoch: [%d], d_loss_fake: [%.6f]--[%.4f], d_loss_real: [%.6f]--[%.4f], g_loss: [%.6f]--[%.4f]"
+						 	% (epoch, terrD_fake/counter, errD_fake, terrD_real/counter, errD_real, terrG/counter, errG))
+						p_begin = time.time()
 
 					if time.time() - s_begin > Options.sampler_time:
 						samples, d_loss, g_loss = self.sess.run(

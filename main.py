@@ -51,6 +51,8 @@ tf.app.flags.DEFINE_integer('checkpoint_time', 30*60,
                             """Time to save checkpoints in.""")
 tf.app.flags.DEFINE_integer('sampler_time', 30*60,
                             """Time to save samples in.""")
+tf.app.flags.DEFINE_integer('print_time', 60,
+			    """Time to print loss.""")
 tf.app.flags.DEFINE_boolean('calc_mean', False,
                             """Whether or not to calculate mean.""")
 

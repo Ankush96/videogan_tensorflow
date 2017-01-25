@@ -688,6 +688,7 @@ class videoGan():
 
 			s_begin = time.time()
 			c_begin = time.time()
+			p_begin = time.time()
 
 			print("Starting training epoch")
 			for epoch in range(Options.train_epochs):
@@ -715,8 +716,10 @@ class videoGan():
 
 					counter += 1
 
-					print("Epoch: [%d], d_loss_fake: [%.6f]--[%.4f], d_loss_real: [%.6f]--[%.4f], g_loss: [%.6f]--[%.4f]" \
-					% (epoch, terrD_fake/counter, errD_fake, terrD_real/counter, errD_real, terrG/counter, errG))
+					if time.time() - p_begin > Options.print_time:
+						print("Epoch: [%d], d_loss_fake: [%.6f]--[%.4f], d_loss_real: [%.6f]--[%.4f], g_loss: [%.6f]--[%.4f]"
+						 	% (epoch, terrD_fake/counter, errD_fake, terrD_real/counter, errD_real, terrG/counter, errG))
+						p_begin = time.time()
 
 					if time.time() - s_begin > Options.sampler_time:
 						samples, d_loss, g_loss = self.sess.run(
@@ -811,6 +814,8 @@ tf.app.flags.DEFINE_integer('checkpoint_time', 30*60,
                             """Time to save checkpoints in.""")
 tf.app.flags.DEFINE_integer('sampler_time', 30*60,
                             """Time to save samples in.""")
+tf.app.flags.DEFINE_integer('print_time', 60,
+			    			"""Time to print loss.""")
 tf.app.flags.DEFINE_boolean('calc_mean', False,
                             """Whether or not to calculate mean.""")
 
