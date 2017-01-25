@@ -1,8 +1,4 @@
 import tensorflow as tf
-from options import Options
-
-global keep_prob
-keep_prob = tf.placeholder(tf.float32)
 
 try:
 	image_summary = tf.summary.image
@@ -60,7 +56,6 @@ def conv3d(input_, output_dim,
 		conv = tf.reshape(tf.nn.bias_add(conv, biases), conv.get_shape())
 
 		return conv		
-
 
 
 def deconv2d(input_, output_shape,

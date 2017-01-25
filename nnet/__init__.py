@@ -1,53 +1,49 @@
 import tensorflow as tf
 import numpy as np
 import sys
-from options import Options
 from nnet import modules as md
 import utils
 import os
 import time
+import glob
 
+global Options
 
 class videoGan():
 
 	def __init__(self, 
-				 video_shape=Options.video_shape, 
-				 batch_size=Options.batch_size, 
-				 sample_size = Options.sample_size,
-				 z_dim=Options.z_dim,
-				 gf_dim=Options.gf_dim,
-				 df_dim=Options.df_dim,
-				 gfc_dim=Options.gfc_dim,
-				 dfc_dim=Options.dfc_dim,
-				 c_dim=Options.c_dim,
-				 mask_penalty=Options.mask_penalty):
+				 flags, 
+				 batch_size, 
+				 sample_size,
+				 z_dim,
+				 gf_dim,
+				 df_dim,
+				 c_dim,
+				 mask_penalty):
 
 		"""
 		Input:
+			flags: All options and hyperparameters
 			batch_size: The size of batch. Should be specified before training.
-			video_shape: (optional) Shape of videos. [32,64,64,3]
-			batch_size: (optional) Batch size for training algorithm
-			sample_size: (optional) Number of samples to be generated at once
-			z_dim: (optional) Dimension of dim for Z. [100]
-			gf_dim: (optional) Dimension of gen filters in first conv layer. [64]
-			df_dim: (optional) Dimension of discrim filters in first conv layer. [64]
-			gfc_dim: (optional) Dimension of gen units for for fully connected layer. [1024]
-			dfc_dim: (optional) Dimension of discrim units for fully connected layer. [1024]
-			c_dim: (optional) Dimension of image color. For grayscale input, set to 1. [3]
-			mask_penalty: (optional) Lambda for L1 regularizer of mask
+			video_shape: Shape of videos. [32,64,64,3]
+			batch_size: Batch size for training algorithm
+			sample_size: Number of samples to be generated at once
+			z_dim: Dimension of dim for Z. [100]
+			gf_dim: Dimension of gen filters in first conv layer. [64]
+			df_dim: Dimension of discrim filters in first conv layer. [64]
+			c_dim: Dimension of image color. For grayscale input, set to 1. [3]
+			mask_penalty: Lambda for L1 regularizer of mask
 		"""
-
+		global Options
+		Options = flags
 		self.batch_size = batch_size
-		self.video_shape = video_shape
+		self.video_shape = [32,64,64,3]
 		self.sample_size = sample_size
 
 		self.z_dim = z_dim
 
 		self.gf_dim = gf_dim
 		self.df_dim = df_dim
-
-		self.gfc_dim = gfc_dim
-		self.dfc_dim = dfc_dim
 
 		self.c_dim = c_dim
 		self.mask_penalty = mask_penalty
@@ -173,7 +169,7 @@ class videoGan():
 		s2, s4, s8, s16, s32 = int(s/2), int(s/4), int(s/8), int(s/16), int(s/32)
 		
 		# print("Inside generator")
-		# print("z- shape = ", z.get_shape().as_list())                   # [None, 100]
+		# print("z- shape = ", z.get_shape().as_list())				   # [None, 100]
 		
 		# s stands for static part
 		self.sz_, self.sh0_w, self.sh0_b = md.linear(z, self.gf_dim*8*s16*s16, 'g_sh0_lin', with_w=True)
@@ -322,23 +318,52 @@ class videoGan():
 		return gen_video
 	 
 
+	def prefix(self):
+		prefix = "videogan_"
+		prefix += "bs_%d_" % (Options.batch_size)
+		prefix += "ss_%d_" % (Options.sample_size)
+		prefix += "lrd_%.5f_" % (Options.lrate_d)
+		prefix += "lrg_%.5f_" % (Options.lrate_g)
+		prefix += "betad_%.3f_" % (Options.beta1_d)
+		prefix += "betag_%.3f_" % (Options.beta1_g)
+		return prefix
+
 	def train(self, dataset):
 		
+		try:
+			temp = set(tf.global_variables())
+		except:
+			temp = set(tf.all_variables())
+
 		print("Creating optimizer")
-		d_optim = tf.train.AdamOptimizer(Options.lrate_d, beta1=Options.beta1) \
+		d_optim = tf.train.AdamOptimizer(Options.lrate_d, beta1=Options.beta1_d) \
 						  .minimize(self.d_loss, var_list=self.d_vars)
-		g_optim = tf.train.AdamOptimizer(Options.lrate_g, beta1=Options.beta1) \
+		g_optim = tf.train.AdamOptimizer(Options.lrate_g, beta1=Options.beta1_g) \
 						  .minimize(self.g_loss, var_list=self.g_vars)
 		print("Optimizer created")
 
 		with tf.Session() as sess:
 			self.sess = sess
-			print("Initializing")
 			try:
-				tf.global_variables_initializer().run()
+				print("Restoring from checkpoint")
+				_dir = os.path.join(Options.checkpoint_dir, self.prefix())
+				a = glob.glob(os.path.join(_dir, '*/'))
+				a = [int(i.split('/')[-2]) for i in a]
+				a.sort()
+				_dir = os.path.join(_dir, str(a[-1]), 'model.ckpt')
+				self.saver.restore(self.sess, _dir)
+				print("Model restored")
+				try:
+					self.sess.run(tf.variables_initializer(set(tf.global_variables()) - temp))
+				except:
+					self.sess.run(tf.initialize_variables(set(tf.all_variables()) - temp))
 			except:
-				tf.initialize_all_variables().run()
-			print("Initialized")
+				print("Initializing")
+				try:
+					tf.global_variables_initializer().run()
+				except:
+					tf.initialize_all_variables().run()
+				print("Initialized")
 
 			print("Merging summaries")
 			self.g_sum = md.merge_summary([self.z_sum, self.d__sum,
@@ -372,7 +397,7 @@ class videoGan():
 					_, summary_str = self.sess.run([g_optim, self.g_sum],
 						feed_dict={ self.z: batch_z })
 					self.writer.add_summary(summary_str, counter)
-					
+						
 					errD_fake = self.d_loss_fake.eval({self.z: batch_z})
 					errD_real = self.d_loss_real.eval({self.videos: sub_data})
 					errG = self.g_loss.eval({self.z: batch_z})
@@ -397,9 +422,10 @@ class videoGan():
 
 					if time.time() - c_begin > Options.checkpoint_time:
 						print("Checkpointing")
-						if not os.path.exists("./checkpoints/"):
-							os.makedirs("./checkpoints/")
-						self.save(Options.checkpoint_dir(), counter, sess)
+						if not os.path.exists(Options.checkpoint_dir):
+							os.makedirs(Options.checkpoint_dir)
+						_dir = os.path.join(Options.checkpoint_dir, self.prefix())
+						self.save(_dir, epoch, self.sess)
 						c_begin = time.time()
 						
 						counter = 0
@@ -410,14 +436,18 @@ class videoGan():
 
 	def save(self,
 			 _dir,
-			 counter,
+			 epoch,
 			 sess):
 		'''Checkpoints a tensorflow model
 		Input:
 			_dir: Directory to save checkpoint in
-			counter: A parameter needed for saver
+			epoch: A parameter needed for saver
 			sess: Current session to be saved
 		'''
 		if not os.path.exists(_dir):
 			os.makedirs(_dir)
-		self.saver.save(sess, _dir, global_step=counter)
+		_sub_dir = os.path.join(_dir, str(epoch))
+		if not os.path.exists(_sub_dir):
+			os.makedirs(_sub_dir)
+		self.saver.save(sess, os.path.join(_sub_dir, 'model.ckpt'))
+		print("Checkpointed")

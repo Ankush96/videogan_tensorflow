@@ -172,7 +172,7 @@ def save_samples(samples,
 		new_mean[i] = resize(im,(64,64,3),order=3)
 	_mean = new_mean	
 	# samples shape is [sample_size]+video_shape = [ss, 32, 64, 64, 3]
-	for sample_num in range(samples.shape[0]):
+	for sample_num in range(len(samples)):
 		sample = samples[sample_num]
 		sample = np.reshape(sample, [-1,64,3])
 		name = str(sample_num)+'.jpg'
