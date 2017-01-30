@@ -175,7 +175,7 @@ def save_samples(samples,
 	_mean = new_mean	
 	# samples shape is [sample_size]+video_shape = [ss, 32, 64, 64, 3]
 	for sample_num in range(len(samples)):
-		sample = samples[sample_num]
+		sample = samples[sample_num] + _mean
 		sample = np.reshape(sample, [-1,64,3])
 		name = str(sample_num)+'.jpg'
 		name = os.path.join(folder,name)
