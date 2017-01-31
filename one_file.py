@@ -158,6 +158,7 @@ def save_samples(samples,
 		epoch: the epoch in which this was created
 		counter: the batch number
 	"""
+	print("Saving samples")
 	if not os.path.exists(Options.sample_path):
 		os.makedirs(Options.sample_path)
 
@@ -176,6 +177,8 @@ def save_samples(samples,
 	# samples shape is [sample_size]+video_shape = [ss, 32, 64, 64, 3]
 	for sample_num in range(len(samples)):
 		sample = samples[sample_num] + _mean
+		sample = sample.astype(float)
+		sample /= sample.max()
 		sample = np.reshape(sample, [-1,64,3])
 		name = str(sample_num)+'.jpg'
 		name = os.path.join(folder,name)
