@@ -141,7 +141,6 @@ class Dataset(object):
 				new_ims = np.zeros(shape=video_shape)
 				for i, im in enumerate(ims):
 					new_ims[i] = resize(im,(64,64,3),order=3)
-
 				batch[video_num] = new_ims - self._mean
 
 			yield batch
@@ -174,9 +173,9 @@ def save_samples(samples,
 	_mean = new_mean	
 	# samples shape is [sample_size]+video_shape = [ss, 32, 64, 64, 3]
 	for sample_num in range(len(samples)):
+		
 		sample = samples[sample_num] + _mean
-		sample = sample.astype(float)
-		sample /= sample.max()
+		sample /= 2.0
 		sample = np.reshape(sample, [-1,64,3])
 		name = str(sample_num)+'.jpg'
 		name = os.path.join(folder,name)
