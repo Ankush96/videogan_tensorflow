@@ -18,5 +18,38 @@ Make a folder named data in this repository and put all images (the jpeg files a
 Training
 ----------------------------------------
 ```sh
-python main.py
+python main.py [Options]
+
+Options:
+
+# Data
+  --dataset, './data', Path to data.
+  --data_list, './data/list.pkl', Cached list of data.
+  --mean_path, './data/mean.png', Path to mean of data.
+  --sample_path, './samples', Path to save samples in.
+
+# Training
+  --batch_size, 20, Number of videos to process in a batch.
+  --sample_size, 20, Number of videos to sample and save in a batch.
+  --train_epochs, 10**10, Number of training epochs.
+  --lrate_d, 1e-5, Learning rate for discriminator.
+  --lrate_g, 1e-4, Learning rate for generator.
+  --beta1_d, 0.5, beta1 for discriminator.
+  --beta1_g, 0.5, beta1 for generator.
+
+# Architecture
+  --z_dim, 100, Dimension of initial noise vector.
+  --gf_dim, 64, Conv kernel size of G.
+  --df_dim, 64, Conv kernel size of D.
+  --c_dim, 3, Number of input channels.
+  --mask_penalty, 0.1, Lambda for L1 regularizer of mask.
+
+# Model saving
+  --checkpoint_dir, './checkpoints', Path to checkpoint models.
+  --checkpoint_time, 30*60, Time to save checkpoints after. 
+  --sampler_time, 30*60, Time to save samples in.
+  --print_time, 60, Time to print loss.
+  --calc_mean, False, Whether or not to calculate mean.
+
+
 ```
