@@ -2,6 +2,16 @@ Generating Videos with Scene Dynamics
 --------------------------------------
 This repository contains an implementation of [Generating Videos with Scene Dynamics](http://web.mit.edu/vondrick/tinyvideo/) by Carl Vondrick, Hamed Pirsiavash, Antonio Torralba. The model learns to generate tiny videos using adversarial networks.
 
+Visualizations
+---------------------------------
+When trained on golf dataset, the following samples are obtained. <br>
+<img src="https://github.com/Ankush96/videogan_tensorflow/blob/master/3.gif?raw=True" width="300"> 
+<img src="https://github.com/Ankush96/videogan_tensorflow/blob/master/2.gif?raw=True" width="300"> <br>
+
+Hopefully some careful parameter tuning will give better results
+
+
+
 Setup
 ---------------------------------
 
